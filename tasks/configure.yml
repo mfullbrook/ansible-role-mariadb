@@ -29,6 +29,14 @@
   with_items: "{{ mysql_config_include_files }}"
   notify: restart mysql
 
+- name: Create log directory
+  file:
+    path: "{{ mysql_log_error | dirname }}"
+    owner: mysql
+    group: adm
+    state: directory
+    mode: 0o2755
+
 - name: Create slow query log file (if configured).
   command: "touch {{ mysql_slow_query_log_file }}"
   args:
@@ -69,6 +77,19 @@
     group: mysql
     mode: 0640
   when: mysql_log == "" and mysql_log_error != ""
+
+- name: Install mysql system tables
+  command: /usr/bin/mysql_install_db
+  args:
+    creates: "{{ mysql_datadir }}/mysql"
+
+- name: Set ownership on all data directories
+  file:
+    path: "{{ mysql_datadir }}"
+    recurse: true
+    mode: 0770
+    owner: mysql
+    group: mysql
 
 - name: Ensure MySQL is started and enabled on boot.
   service: "name={{ mysql_daemon }} state=started enabled={{ mysql_enabled_on_startup }}"
